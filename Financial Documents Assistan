@@ -1,0 +1,778 @@
+{
+  "name": "Financial Documents Assistan",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "afd7f4ff-ca0f-4f4f-910f-f020de03a0e4",
+      "name": "When clicking \"Test workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -448,
+        1936
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "35ea70c4-8669-4975-a68d-bbaa094713c0",
+              "name": "directory",
+              "type": "string",
+              "value": "/home/node/BankStatements"
+            },
+            {
+              "id": "1d081d19-ff4e-462a-9cbe-7af2244bf87f",
+              "name": "file_added",
+              "type": "string",
+              "value": "={{ $json.event === 'add' && $json.path || ''}}"
+            },
+            {
+              "id": "18f8dc03-51ca-48c7-947f-87ce8e1979bf",
+              "name": "file_changed",
+              "type": "string",
+              "value": "={{ $json.event === 'change' && $json.path || '' }}"
+            },
+            {
+              "id": "65074ff7-037b-4b3b-b2c3-8a61755ab43b",
+              "name": "file_deleted",
+              "type": "string",
+              "value": "={{ $json.event === 'unlink' && $json.path || '' }}"
+            },
+            {
+              "id": "9a1902e7-f94d-4d1f-9006-91c67354d3e8",
+              "name": "qdrant_collection",
+              "type": "string",
+              "value": "local_file_search"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ecc47f4-c90a-4983-8225-2201fb5faced",
+      "name": "Set Variables",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -256,
+        1936
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.file_added }}",
+        "options": {}
+      },
+      "id": "e84aad4d-0e0e-4b2c-a13c-6699905108b0",
+      "name": "Read File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "position": [
+        256,
+        2352
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e3306ff0-3e87-44ef-8e16-82b071dc0f43",
+      "name": "Embeddings Mistral Cloud",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "position": [
+        640,
+        2512
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.data }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "filter_by_filename",
+                "value": "={{ $json.file_location }}"
+              },
+              {
+                "name": "filter_by_created_month",
+                "value": "={{ $now.year + '-' + $now.monthShort }}"
+              },
+              {
+                "name": "filter_by_created_week",
+                "value": "={{ $now.year + '-' + $now.monthShort + '-W' + $now.weekNumber }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "77bc50be-1cc3-4af2-8137-bae336f85052",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [
+        736,
+        2512
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "5cf3e37a-80a5-4a5b-8482-1327976b30d4",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "position": [
+        752,
+        2624
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "41a1d4ca-e5a5-4fb9-b249-8796ae759b33",
+              "name": "data",
+              "type": "string",
+              "value": "=## file location\n{{ [$json.directory, $json.fileName].join('/') }}\n## file created\n{{ $now.toISO() }}\n## file contents\n{{ $input.item.binary.data.data.base64Decode() }}"
+            },
+            {
+              "id": "c091704d-b81c-448b-8c90-156ef568b871",
+              "name": "file_location",
+              "type": "string",
+              "value": "={{ [$json.directory, $json.fileName].join('/') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cc93cf5f-d103-47a6-8ee4-8c2427d24900",
+      "name": "Prepare Embedding Document",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        432,
+        2352
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "741a4537-0c1b-40bb-bdf2-301e272f59a5",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        1200,
+        1904
+      ],
+      "webhookId": "37587fe0-b8db-4012-90a7-1f65b9bfd0df",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ecff8505-800e-41f4-8368-98dcee438627",
+      "name": "Question and Answer Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "position": [
+        1424,
+        1904
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "model": "mistral-small-2402",
+        "options": {}
+      },
+      "id": "6f5f2c84-ef8b-48ee-9edd-339a6d0063ee",
+      "name": "Mistral Cloud Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "position": [
+        1424,
+        2064
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "4be1bb11-fdcf-4d41-b0f3-b73788578fa0",
+      "name": "Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "position": [
+        1536,
+        2064
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "e94919f9-f066-4c04-8f63-326b0743271a",
+      "name": "Embeddings Mistral Cloud1",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "position": [
+        1536,
+        2304
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "840219e1-ed47-4b00-83fd-6b3c0bd71650",
+              "name": "file_added",
+              "type": "string",
+              "value": "={{ $('Set Variables').item.json.file_changed }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4c5811d5-c31e-4d53-890e-06eaef117d35",
+      "name": "Remap for File_Added Flow",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        832,
+        1936
+      ],
+      "typeVersion": 3.3
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $('Set Variables').item.json.qdrant_collection }}/points/scroll",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "qdrantApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n \"filter\": {\n \"must\": [\n {\n \"key\": \"metadata.filter_by_filename\",\n \"match\": {\n \"value\": \"{{ $json.file_changed }}\"\n }\n }\n ]\n },\n \"limit\": 1,\n \"with_payload\": false,\n \"with_vector\": false\n}",
+        "options": {}
+      },
+      "id": "b35a9f5d-ab15-4f96-a0ea-e37a69c4ddf6",
+      "name": "Search For Existing Point",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        256,
+        1504
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0392bac0-8fb5-406b-b59f-575edf5ab30d",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.result.points }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "031a623c-1df4-416e-967b-ff2b21e22ec6",
+      "name": "Has Existing Point?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        432,
+        1504
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $('Set Variables').item.json.qdrant_collection }}/points/delete",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "qdrantApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "points",
+              "value": "={{ $json.result.points.map(point => point.id) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "722f1054-cb85-49d9-87f3-a78a252d8f25",
+      "name": "Delete Existing Point",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        640,
+        1936
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $('Set Variables').item.json.qdrant_collection }}/points/scroll",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "qdrantApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n \"filter\": {\n \"must\": [\n {\n \"key\": \"metadata.filter_by_filename\",\n \"match\": {\n \"value\": \"{{ $json.file_changed }}\"\n }\n }\n ]\n },\n \"limit\": 1,\n \"with_payload\": false,\n \"with_vector\": false\n}",
+        "options": {}
+      },
+      "id": "7a0f7554-e6f9-4ac8-988c-1ed78d2acedc",
+      "name": "Search For Existing Point1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        256,
+        1936
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "0392bac0-8fb5-406b-b59f-575edf5ab30d",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.result.points }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b77c626b-7eac-4836-b445-225466a7e04d",
+      "name": "Has Existing Point?1",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        432,
+        1936
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $('Set Variables').item.json.qdrant_collection }}/points/delete",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "qdrantApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "points",
+              "value": "={{ $json.result.points.map(point => point.id) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d888631a-34a7-480b-b412-7ae7ec1fe882",
+      "name": "Delete Existing Point1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        624,
+        1504
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "a1f6d86a-9805-4d0e-ac70-90c9cf0ad339",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.file_deleted }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "file_deleted"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "d15cde67-b5b0-4676-b4fb-ead749147392",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.file_changed }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "file_changed"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.file_added }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "file_added"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "626c9692-2d3c-4203-929b-6ca605820ccc",
+      "name": "Handle File Event",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -96,
+        1936
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Set Variables').item.json.qdrant_collection }}"
+        },
+        "options": {}
+      },
+      "id": "b1afed51-7d73-45f3-9dc9-664fa62b49d8",
+      "name": "Qdrant Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "position": [
+        624,
+        2352
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "qdrantCollection": {
+          "__rl": true,
+          "mode": "id",
+          "value": "BankStatements"
+        },
+        "options": {}
+      },
+      "id": "b3c435c1-8137-4a07-968c-e3a8694fc758",
+      "name": "Qdrant Vector Store1",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "position": [
+        1536,
+        2192
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Variables": {
+      "main": [
+        [
+          {
+            "node": "Handle File Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle File Event": {
+      "main": [
+        [
+          {
+            "node": "Search For Existing Point",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search For Existing Point1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Existing Point?": {
+      "main": [
+        [
+          {
+            "node": "Delete Existing Point1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Existing Point?1": {
+      "main": [
+        [
+          {
+            "node": "Delete Existing Point",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Existing Point": {
+      "main": [
+        [
+          {
+            "node": "Remap for File_Added Flow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Question and Answer Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remap for File_Added Flow": {
+      "main": [
+        [
+          {
+            "node": "Read File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search For Existing Point": {
+      "main": [
+        [
+          {
+            "node": "Has Existing Point?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Embedding Document": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search For Existing Point1": {
+      "main": [
+        [
+          {
+            "node": "Has Existing Point?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking \"Test workflow\"": {
+      "main": [
+        [
+          {
+            "node": "Set Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "27549539-021c-4f52-bec0-e768320bf343",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "68946cbc98ccf970d36b4658d8351144452d1b30963882ca9234ddeea0b1b47f"
+  },
+  "id": "CXqWYBehxiCj0KLv",
+  "tags": []
+}
