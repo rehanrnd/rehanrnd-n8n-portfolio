@@ -1,0 +1,817 @@
+{
+  "name": "HR Recruiter Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "readStatus": "unread",
+          "sender": ""
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "f5869b66-19df-4603-a4ab-12e0f669401c",
+      "name": "Gmail Trigger (Email CV)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        208
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CuWEmVOCAik5Ac8P",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "useQueryString": true,
+        "queryString": "'1SVUJ_WW8UPIXJnPtKjkRMlHPUg6-hq9Y' in parents and mimeType='application/pdf'",
+        "options": {}
+      },
+      "id": "34d816a1-4766-4fd0-b751-c88a78d452f2",
+      "name": "List CV Files in Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 2,
+      "operation": "fileFolder",
+      "position": [
+        160,
+        400
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "RY4DhzjfbOTNRkVA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        400
+      ],
+      "id": "6f4ba5cc-4123-46b9-ae24-a56621007784",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        608,
+        416
+      ],
+      "id": "b8441593-8066-4c0c-a9dd-c6db6c680612",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "RY4DhzjfbOTNRkVA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        368,
+        400
+      ],
+      "id": "c33a6050-b2c2-4ae5-beb3-6d1fca899af7",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.3-chat-latest",
+          "mode": "list",
+          "cachedResultName": "gpt-5.3-chat-latest"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        592
+      ],
+      "id": "8906935a-5c42-4019-8037-e50e7a68dc98",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qZ6vLBK4J1D9F9xp",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        816,
+        416
+      ],
+      "id": "ab298ea9-75f1-4efd-84c7-780e9409ca4f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"full_name\": {\"type\": \"string\"},\n    \"email\": {\"type\": \"string\"},\n    \"phone\": {\"type\": \"string\"},\n    \"education\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"degree\": {\"type\": \"string\"},\n          \"major\": {\"type\": \"string\"},\n          \"institution\": {\"type\": \"string\"},\n          \"year\": {\"type\": \"string\"}\n        }\n      }\n    },\n    \"work_experience\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"title\": {\"type\": \"string\"},\n          \"company\": {\"type\": \"string\"},\n          \"duration\": {\"type\": \"string\"},\n          \"description\": {\"type\": \"string\"}\n        }\n      }\n    },\n    \"skills\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n    \"total_years_experience\": {\"type\": \"number\"},\n    \"languages\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n    \"summary\": {\"type\": \"string\"}\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        608
+      ],
+      "id": "454d4774-4a94-4754-8360-a680032f396e",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"candidate_name\",\n    \"email\",\n    \"education_check\",\n    \"skills\",\n    \"experience\",\n    \"score\",\n    \"final_decision\",\n    \"reason\"\n  ],\n  \"properties\": {\n    \"candidate_name\": { \"type\": \"string\" },\n    \"email\": { \"type\": \"string\" },\n    \"education_check\": {\n      \"type\": \"string\",\n      \"enum\": [\"complete\", \"in_progress\", \"not_relevant\"]\n    },\n    \"skills\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"maxItems\": 10\n    },\n    \"experience\": {\n      \"type\": \"object\",\n      \"required\": [\n        \"project_management\",\n        \"vendor_coordination\",\n        \"end_to_end_project\",\n        \"relevance_level\"\n      ],\n      \"properties\": {\n        \"project_management\": {\n          \"type\": \"string\",\n          \"enum\": [\"none\", \"partial\", \"strong\"]\n        },\n        \"vendor_coordination\": {\n          \"type\": \"string\",\n          \"enum\": [\"none\", \"partial\", \"strong\"]\n        },\n        \"end_to_end_project\": {\n          \"type\": \"string\",\n          \"enum\": [\"none\", \"partial\", \"strong\"]\n        },\n        \"relevance_level\": {\n          \"type\": \"string\",\n          \"enum\": [\"high\", \"medium\", \"low\", \"mixed\"]\n        }\n      }\n    },\n    \"score\": {\n      \"type\": \"object\",\n      \"required\": [\"skills_match\", \"experience_match\"],\n      \"properties\": {\n        \"skills_match\": {\n          \"type\": \"number\",\n          \"minimum\": 0,\n          \"maximum\": 100\n        },\n        \"experience_match\": {\n          \"type\": \"number\",\n          \"minimum\": 0,\n          \"maximum\": 100\n        }\n      }\n    },\n    \"final_decision\": {\n      \"type\": \"string\",\n      \"enum\": [\"pass\", \"not_pass\"]\n    },\n    \"reason\": { \"type\": \"string\" }\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        608
+      ],
+      "id": "47304b1a-bdcd-4e73-ac78-4a8095f73162",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.3-chat-latest",
+          "mode": "list",
+          "cachedResultName": "gpt-5.3-chat-latest"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        608
+      ],
+      "id": "c4593841-4619-4ebb-bb44-e2e74ddb92cd",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "qZ6vLBK4J1D9F9xp",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8cb471b7-6a30-4613-a505-9cfce4c7715d",
+              "name": "Name",
+              "value": "={{ $json.output.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "8134e078-649d-4020-ad0c-3c6747c135f1",
+              "name": "Email",
+              "value": "={{ $('Extract Output').item.json.output.email }}",
+              "type": "string"
+            },
+            {
+              "id": "bb2a993e-af64-47f7-bdd5-21b342c60759",
+              "name": "Score",
+              "value": "={{ Math.round($json.output.score.skills_match * 0.6 + $json.output.score.experience_match * 0.4) }}",
+              "type": "string"
+            },
+            {
+              "id": "d7d605a3-7291-47b0-8a99-4993f6aa3604",
+              "name": "Reason",
+              "value": "={{ $json.output.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "1bb14c45-9a12-45a5-8fa7-4cd78bb872ee",
+              "name": "Decision",
+              "value": "={{ $json.output.final_decision }}",
+              "type": "string"
+            },
+            {
+              "id": "ccb1f88e-091d-4536-b571-77b2d344edf7",
+              "name": "Subject",
+              "value": "Your Application Update for Junior Architect",
+              "type": "string"
+            },
+            {
+              "id": "ae4dd8eb-3750-4d34-8fe7-0ab795642d8c",
+              "name": "Body",
+              "value": "Dear [Candidate Name],\\n\\nThank you for applying for the Junior Architect position at [Company Name].\\n\\nAfter reviewing your CV, we are pleased to invite you to proceed to the interview stage. Here are the details:\\n\\nDay/Date: [Day, Date]\\nTime: [Time] WIB\\nFormat: [In-person / Online via Google Meet / Zoom]\\nLocation/Link: [Address / Meeting Link]\\n\\nPlease confirm your attendance by replying to this email no later than [Confirmation Date].\\n\\nIf you have any questions, feel free to contact us.\\n\\nBest regards,\\n[HR Name]\\n[Position]\\n[Company Name]\\n[Phone Number]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        176
+      ],
+      "id": "3f045a29-d66a-4a71-b353-32eefa3bc0b5",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Decision }}",
+                    "rightValue": "pass",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "967769b6-029f-4e12-82bc-ed08898aee63"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Pass"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6391df8f-94d9-4d47-9b1c-f2c1ebc7e68d",
+                    "leftValue": "={{ $json.Decision }}",
+                    "rightValue": "not_pass",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Not pass"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1232,
+        176
+      ],
+      "id": "d16a55d1-3324-42e8-a84a-7f3fa77d7ab5",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('List CV Files in Drive').item.json.id }}"
+        },
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1t3CoqOPHuBchH5RWDkxFthbMOI6S5iXK",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        816,
+        0
+      ],
+      "id": "266f4f4a-13d1-4ae7-96e5-c0bd87b78f36",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "RY4DhzjfbOTNRkVA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{ $json.subject }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1Tgx0sPGI0bxCCxQIFVQxQugCEaweDI2i",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        368,
+        192
+      ],
+      "id": "58139147-2ab0-4868-9f42-ff6a467e97ee",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "RY4DhzjfbOTNRkVA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "82d9323d-53d9-4a0c-8254-35ce940cd816",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "Junior Architect",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        160,
+        208
+      ],
+      "id": "431c69c6-48c5-468e-858f-00e46f083382",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "={{ $('Edit Fields1').item.json.Subject }}",
+        "message": "=Dear {{ $json.Name }},<br><br>\n\nThank you for applying for the Junior Architect position at Allure Industries.<br><br>\n\nAfter reviewing your CV, we are pleased to invite you to proceed to the interview stage. Here are the details:<br><br>\n\nDay/Date: Friday, 3 April 2026<br>\nTime: 10.30 WIB<br>\nFormat: Via Gmeet<br>\nLocation/Link: https://meet.google.com/suy-htvx-ors<br><br>\n\nPlease confirm your attendance by replying to this email no later than 2 April 2026.<br><br>\n\nIf you have any questions, feel free to contact us.<br><br>\n\nBest regards,<br>\n\nRehan<br>\nHR Lead<br>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        96
+      ],
+      "id": "026152ed-1c3d-45f7-a04b-7fde5826c2a1",
+      "name": "Interview Invitaiton",
+      "webhookId": "1ebc8c00-0b42-4b25-b898-1421c05caf7c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CuWEmVOCAik5Ac8P",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "={{ $('Edit Fields1').item.json.Subject }}",
+        "message": "=<p>Dear {{ $json.Name }},</p>\n\n<p>Thank you for applying for the Junior Architect position at Allure Industries and for taking the time to submit your CV.</p>\n\n<p>After careful consideration, we regret to inform you that we will not be proceeding with your application to the next stage at this time. This decision was made based on the alignment of your profile with our current requirements.</p>\n\n<p>We appreciate your interest and encourage you to continue developing your skills. We will keep your information on file and consider your profile for future opportunities that may be a better fit.</p>\n\n<p>Thank you once again for your time and interest.</p>\n\n<p>\nBest regards,<br>\n<br>\nRehan<br>\nHR Lead<br>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        256
+      ],
+      "id": "455ae4c9-d73d-4672-bafb-24df70bde012",
+      "name": "Failed Email",
+      "webhookId": "cc514a08-c7e0-49d2-b24e-5c60ec0d2d29",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CuWEmVOCAik5Ac8P",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Anda adalah seorang HR analyst yang bertugas mengekstrak informasi dari CV kandidat. Tugas Anda hanya memecah dan mengorganisir informasi yang sudah ada di CV, tanpa menambah atau mengarang informasi apapun.\n\nJika suatu informasi tidak ditemukan di CV, isi dengan string kosong \"\" atau 0 untuk angka. Jangan mengarang data.\n\nCV Content:\n{{ $json.text }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1008,
+        416
+      ],
+      "id": "e7e6e8a3-9457-4f33-96fc-ca4d70068d48",
+      "name": "Extract Output"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an experienced HR recruiter.\nYour task is to evaluate a candidate for the role of: **Junior Architect**\n\n---\nVACANCY REQUIREMENTS (reference):\n- Degree in architecture, interior design, or related field\n- Minimum 2 years experience in design and build\n- Software: AutoCAD, SketchUp, Revit (listed as examples,\n  not all mandatory)\n- Strong creative, visualization, and communication skills\n- Available to join ASAP\n\n---\nSTEP 0 — EDUCATION CHECK (run first, before scoring):\nVerify if candidate has or is pursuing a relevant degree\n(architecture, interior design, or closely related field).\n\nIMPORTANT: Evaluate the HIGHEST completed degree first.\n- If candidate has completed a relevant Bachelor's degree\n  OR higher → education_check = \"complete\", no penalty,\n  even if they are currently pursuing a Master's or PhD.\n- If candidate's ONLY relevant degree is still in progress\n  (no completed relevant degree yet) → education_check =\n  \"in_progress\", apply -5 to experience_match.\n- No relevant degree at all → education_check = \"not_relevant\",\n  cap skills_match at maximum 75.\n\n---\nEVALUATION PRINCIPLES:\n- Distinguish clearly between SKILLS and EXPERIENCE\n- EXPERIENCE levels:\n  - \"none\" = no evidence\n  - \"partial\" = indirect or supporting involvement\n  - \"strong\" = clear ownership or leadership\n- Count BOTH explicit and implicit evidence\n  Implicit evidence includes:\n  - coordination meetings\n  - collaboration with stakeholders\n  - monitoring projects\n  - site supervision\n  - working with contractors or engineers\n\n---\nSTRICT RULE:\nDo NOT assume ownership or responsibility unless explicitly stated.\nGeneral involvement, participation, or support tasks are NOT enough\nto qualify as end-to-end project experience.\n\n---\nEXPERIENCE RELEVANCE WEIGHTING:\nBefore scoring experience_match, classify the candidate's\nPRIMARY work experience into one relevance level:\n\nHIGH (full weight) — primary role involves:\n- Architectural or interior design work with creative input\n- Project involvement at architecture or design firms\n- Freelance architecture or interior projects with design decisions\n\nMEDIUM (70% weight) — primary role involves:\n- Drafting for architecture where candidate has some design input\n- Construction site supervision with design context\n\nLOW (30% weight) — primary role is:\n- Structural or geotechnical TESTING (load test, integrity test,\n  sensor monitoring), even if done on architectural projects\n- Pure 3D visualization or rendering only, with no design\n  decision-making involvement\n- Drafting that strictly executes others' designs with no\n  conceptual or spatial design input\n- QC or quality control roles\n\nMIXED — use when candidate has BOTH high AND low relevance:\n- Main job = low relevance (e.g. structural testing, pure drafter)\n  BUT also has meaningful high-relevance work on the side\n  (e.g. freelance architectural projects)\n- Do NOT classify as \"high\" just because there is some\n  architectural exposure in a low-relevance role\n- Classify as \"mixed\" and apply 50% weight to experience_match\n\nApply this relevance weight BEFORE calculating experience_match.\n\n---\nROLE-SPECIFIC RULES:\nFor Junior Architect:\n- Strong technical skills are HIGHLY valued\n- Partial experience is acceptable and expected\n- Lack of end-to-end project ownership is NORMAL and should\n  NOT heavily penalize the candidate\n- Focus on exposure, learning potential, and involvement\n  rather than leadership\n\nEnd-to-end project classification:\n- \"strong\" → clear ownership from start to finish\n- \"partial\" → strong involvement in multiple stages\n  with meaningful responsibility\n- \"none\" → no clear lifecycle involvement or ownership\n\n---\nCANDIDATE DATA:\n{{ JSON.stringify($json) }}\n\n---\nTASK:\n\n1. Run STEP 0 — education check\n\n2. Extract candidate email address from CV.\n   - If found, return the email as a string.\n   - If not found, return empty string \"\".\n\n3. Extract top SKILLS (max 10, prioritize relevant tools/software)\n\n4. TOOLS ASSESSMENT — apply before finalizing skills_match:\n   Vacancy mentions AutoCAD, SketchUp, Revit as examples,\n   not all mandatory. Assess as follows:\n   - Has AutoCAD + SketchUp + Revit → full score, no deduction\n   - Has AutoCAD + SketchUp (no Revit) → no penalty\n   - Has only one of the three → deduct 8 points from skills_match\n   - Has none of the three → deduct 15 points from skills_match\n\n5. Evaluate EXPERIENCE with relevance weighting applied:\n   - project_management\n   - vendor_coordination\n   - end_to_end_project\n   - relevance_level\n\n6. Calculate scores (0–100):\n   - skills_match (after tools assessment)\n   - experience_match (after relevance weighting\n     and education penalty if applicable)\n\nSCORING GUIDELINES:\n\nskills_match:\n- 85–100 → strong relevant tools including all required software\n- 70–84 → most required tools present, minor gaps\n- 50–69 → moderate relevance, missing key tools\n- <50 → weak or irrelevant\n\nexperience_match (after relevance weight applied):\n- 70–100 → multiple HIGH-relevance experiences,\n  clear and meaningful involvement\n- 50–69 → partial involvement in relevant tasks\n- 30–49 → mostly LOW or MIXED relevance experience\n- <30 → minimal or unrelated experience\n\nEXPERIENCE DURATION (supporting factor only):\n- 3+ years HIGH-relevance → add +5 to experience_match\n- 1–3 years HIGH-relevance → no adjustment\n- Mostly LOW-relevance regardless of duration → apply -5\n- Duration does NOT override relevance quality\n\n7. Apply final decision:\n\nDecision rules:\n- \"pass\":\n  skills_match ≥ 75 AND experience_match ≥ 20\n  AND has at least some relevant experience\n  (HIGH, MEDIUM, or MIXED relevance)\n\n- \"not_pass\":\n  skills_match < 60 regardless of experience\n  OR experience_match < 20 regardless of skills\n  OR relevance_level = \"low\" with experience_match < 30\n\n8. Write \"reason\" — follow these rules strictly:\n\n   For \"pass\":\n   State directly what makes this candidate qualified\n   for the next stage. Focus on: relevant tools, experience\n   relevance, project involvement, and education.\n   Example: \"Proficient in AutoCAD and SketchUp with relevant\n   freelance design experience and a completed architecture\n   degree. Demonstrates solid involvement across design stages.\"\n\n   For \"not_pass\":\n   State directly why they do not qualify. No praise.\n   Focus on: primary experience is irrelevant, missing key\n   qualifications, or insufficient design involvement.\n   Example: \"Primary experience is in drafting and rendering\n   without design decision-making. Does not meet minimum\n   experience relevance for a Junior Architect role.\"\n\n   RULES FOR ALL VERDICTS:\n   - Maximum 2 sentences.\n   - Do NOT start with praise for not_pass candidates.\n   - Do NOT use \"however\", \"but\", \"unfortunately\",\n     \"despite\", or \"although\".\n   - Be direct, factual, and concise.\n\n---\nOUTPUT STRICTLY IN JSON:\n{\n  \"candidate_name\": \"\",\n  \"email\": \"\",\n  \"education_check\": \"complete | in_progress | not_relevant\",\n  \"skills\": [],\n  \"experience\": {\n    \"project_management\": \"none | partial | strong\",\n    \"vendor_coordination\": \"none | partial | strong\",\n    \"end_to_end_project\": \"none | partial | strong\",\n    \"relevance_level\": \"high | medium | low | mixed\"\n  },\n  \"score\": {\n    \"skills_match\": 0,\n    \"experience_match\": 0\n  },\n  \"final_decision\": \"pass | not_pass\",\n  \"reason\": \"\"\n}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1344,
+        416
+      ],
+      "id": "70e2e306-37ac-49ac-872a-240c5f629293",
+      "name": "HR Recruiter Agent"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1eoAM7Ab3SBLbAOFbEPKT7ed5KMrqYL5ED3BjerfwoT0",
+          "mode": "list",
+          "cachedResultName": "Lamaran_Junior Architect",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eoAM7Ab3SBLbAOFbEPKT7ed5KMrqYL5ED3BjerfwoT0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eoAM7Ab3SBLbAOFbEPKT7ed5KMrqYL5ED3BjerfwoT0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Summary": "={{ $json.Reason.substring(0, 200) }}",
+            "Email": "={{ $json.Email }}",
+            "Score": "={{ $json.Score }}",
+            "Decision": "={{ $json.Decision }}",
+            "Name": "={{ $json.Name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Decision",
+              "displayName": "Decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1024,
+        176
+      ],
+      "id": "dc399049-1ade-4bb7-9f4d-038bb7b15ab5",
+      "name": "Input Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "MgBU0JvgiVEyPnS2",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger (Email CV)": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List CV Files in Drive": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "List CV Files in Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extract Output",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Extract Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extract Output",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "HR Recruiter Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "HR Recruiter Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Input Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Interview Invitaiton",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Output": {
+      "main": [
+        [
+          {
+            "node": "HR Recruiter Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HR Recruiter Agent": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Data": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9b7a2c3f-dabf-49e7-bef4-b7f7bc810f21",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "52e9be9dd4b37fc13758fbfe2e964c1dd2a6953842d394b0ccd0441274e0f4a5"
+  },
+  "id": "Sho0S03jZPAzUhOu",
+  "tags": []
+}
